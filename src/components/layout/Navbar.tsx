@@ -130,7 +130,7 @@ export const Navbar: React.FC = () => {
                     </span>
                   </div>
 
-                  {user.role === 'admin' ? (
+                  {user.role === 'admin' && (
                     <Link
                       href="/admin"
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:bg-slate-800 transition-colors"
@@ -138,14 +138,6 @@ export const Navbar: React.FC = () => {
                       <ShieldAlert className="w-4 h-4 text-amber-400" />
                       แดชบอร์ดแอดมิน (Admin Dashboard)
                     </Link>
-                  ) : (
-                    <button
-                      onClick={loginAsDemoAdmin}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:bg-slate-800 text-left transition-colors"
-                    >
-                      <ShieldAlert className="w-4 h-4 text-amber-400" />
-                      สลับเป็น Admin (ทดสอบระบบ)
-                    </button>
                   )}
 
                   <button

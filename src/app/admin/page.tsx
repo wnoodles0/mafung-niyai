@@ -63,14 +63,6 @@ export default function AdminPage() {
             <span>เข้าสู่ระบบด้วยอีเมล Admin</span>
           </button>
 
-          <button
-            onClick={loginAsDemoAdmin}
-            className="px-5 py-2.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 hover:bg-amber-900 font-bold text-xs flex items-center gap-2 shadow-lg transition-all"
-          >
-            <ShieldAlert className="w-4 h-4 text-amber-400" />
-            <span>ทดลองสิทธิ์ Admin (Demo Mode)</span>
-          </button>
-
           <Link
             href="/"
             className="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition-colors"

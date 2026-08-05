@@ -38,11 +38,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to determine role from email
+// Authorized Admin Emails
+const ADMIN_EMAILS = [
+  'wnoodles0@gmail.com',
+  'admin@mafangniyai.com',
+];
+
+// Helper to determine role strictly from email
 const determineRole = (email: string): UserRole => {
-  if (!email) return 'member';
+  if (!email) return 'guest';
   const clean = email.toLowerCase().trim();
-  if (clean.includes('admin') || clean.endsWith('@mafangniyai-admin.com')) {
+  if (ADMIN_EMAILS.includes(clean)) {
     return 'admin';
   }
   return 'member';
@@ -63,7 +69,7 @@ const DEMO_MEMBER: UserProfile = {
 const DEMO_ADMIN: UserProfile = {
   uid: 'user-demo-admin-1',
   email: 'admin@mafangniyai.com',
-  displayName: 'แอดมินบอน (Admin)',
+  displayName: 'ผู้ดูแลระบบ (Admin)',
   photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&q=80',
   role: 'admin',
   providerId: 'demo',

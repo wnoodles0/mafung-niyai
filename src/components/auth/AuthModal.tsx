@@ -184,11 +184,6 @@ export const AuthModal: React.FC = () => {
                 className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500"
               />
             </div>
-            {activeModalTab === 'register' && (
-              <p className="text-[10px] text-slate-500 mt-1">
-                * หากใช้อีเมลที่มีคำว่า <span className="text-purple-400 font-bold">admin</span> ระบบจะรับรองสิทธิ์เป็น ผู้ดูแลระบบ (Admin)
-              </p>
-            )}
           </div>
 
           {/* Password field (Login & Register tabs) */}
@@ -237,25 +232,7 @@ export const AuthModal: React.FC = () => {
 
         </form>
 
-        {/* Demo Role Switch Shortcuts */}
-        <div className="pt-3 border-t border-slate-800 text-center space-y-2">
-          <p className="text-[10px] text-slate-500 font-semibold uppercase">ทดลองเข้าสู่ระบบทันที (Demo Test Roles)</p>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={loginAsDemoMember}
-              className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 hover:text-white hover:border-purple-500/40 transition-colors"
-            >
-              👤 สมาชิกทั่วไป (Member)
-            </button>
-            <button
-              onClick={loginAsDemoAdmin}
-              className="px-3 py-1.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-300 hover:bg-amber-900/60 transition-colors flex items-center gap-1"
-            >
-              <ShieldAlert className="w-3 h-3 text-amber-400" />
-              <span>ผู้ดูแลระบบ (Admin)</span>
-            </button>
-          </div>
-        </div>
+
 
       </div>
     </div>
