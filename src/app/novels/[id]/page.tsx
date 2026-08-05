@@ -17,6 +17,7 @@ import {
   ListMusic, 
   ArrowLeft
 } from 'lucide-react';
+import { formatImageUrl, DEFAULT_COVER_IMAGE } from '@/lib/audioUtils';
 
 export default function NovelDetailPage() {
   const params = useParams();
@@ -66,8 +67,11 @@ export default function NovelDetailPage() {
       <div className="relative overflow-hidden bg-slate-950 border-b border-slate-900 pt-6 pb-12">
         <div className="absolute inset-0 opacity-25 pointer-events-none">
           <img
-            src={novel.bannerUrl || novel.coverUrl}
+            src={formatImageUrl(novel.bannerUrl || novel.coverUrl)}
             alt=""
+            onError={(e) => {
+              e.currentTarget.src = DEFAULT_COVER_IMAGE;
+            }}
             className="w-full h-full object-cover blur-3xl scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/90 to-slate-950" />
@@ -90,8 +94,11 @@ export default function NovelDetailPage() {
             <div className="md:col-span-4 lg:col-span-3">
               <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl shadow-purple-950/60 border border-purple-500/30 bg-slate-900 group">
                 <img
-                  src={novel.coverUrl}
+                  src={formatImageUrl(novel.coverUrl)}
                   alt={novel.title}
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_COVER_IMAGE;
+                  }}
                   className="w-full h-full object-cover"
                 />
                 {novel.isCompleted && (

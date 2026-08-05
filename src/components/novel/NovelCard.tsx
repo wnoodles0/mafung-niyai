@@ -8,6 +8,8 @@ import { useAuth } from '@/context/AuthContext';
 import { MOCK_CHAPTERS } from '@/lib/mockData';
 import { Play, Star, Eye, Heart, Headphones, CheckCircle2 } from 'lucide-react';
 
+import { formatImageUrl, DEFAULT_COVER_IMAGE } from '@/lib/audioUtils';
+
 interface NovelCardProps {
   novel: Novel;
 }
@@ -41,8 +43,11 @@ export const NovelCard: React.FC<NovelCardProps> = ({ novel }) => {
       {/* Cover Image Container */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-950">
         <img
-          src={novel.coverUrl}
+          src={formatImageUrl(novel.coverUrl)}
           alt={novel.title}
+          onError={(e) => {
+            e.currentTarget.src = DEFAULT_COVER_IMAGE;
+          }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 

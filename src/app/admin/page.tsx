@@ -21,6 +21,7 @@ import {
   LogIn
 } from 'lucide-react';
 import Link from 'next/link';
+import { formatImageUrl, DEFAULT_COVER_IMAGE } from '@/lib/audioUtils';
 
 export default function AdminPage() {
   const { currentRole, openAuthModal, loginAsDemoAdmin } = useAuth();
@@ -211,8 +212,11 @@ export default function AdminPage() {
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       <img
-                        src={novel.coverUrl}
+                        src={formatImageUrl(novel.coverUrl)}
                         alt={novel.title}
+                        onError={(e) => {
+                          e.currentTarget.src = DEFAULT_COVER_IMAGE;
+                        }}
                         className="w-12 h-16 object-cover rounded-xl shrink-0 border border-slate-800"
                       />
                       <div className="space-y-1 min-w-0">

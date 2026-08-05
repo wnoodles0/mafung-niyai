@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
+import { formatImageUrl, DEFAULT_COVER_IMAGE } from '@/lib/audioUtils';
 
 export const AudioPlayer: React.FC = () => {
   const {
@@ -109,8 +110,11 @@ export const AudioPlayer: React.FC = () => {
         >
           <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-800 group-hover:border-purple-500/50 transition-colors">
             <img
-              src={currentNovel.coverUrl}
+              src={formatImageUrl(currentNovel.coverUrl)}
               alt={currentNovel.title}
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_COVER_IMAGE;
+              }}
               className="w-full h-full object-cover"
             />
             {isPlaying && (

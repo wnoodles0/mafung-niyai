@@ -20,6 +20,7 @@ import {
   Headphones,
   CheckCircle2
 } from 'lucide-react';
+import { formatImageUrl, DEFAULT_COVER_IMAGE } from '@/lib/audioUtils';
 
 export const FullPlayerModal: React.FC = () => {
   const {
@@ -75,8 +76,11 @@ export const FullPlayerModal: React.FC = () => {
       {/* Background Atmosphere Image */}
       <div className="absolute inset-0 pointer-events-none opacity-20 overflow-hidden">
         <img
-          src={currentNovel.coverUrl}
+          src={formatImageUrl(currentNovel.coverUrl)}
           alt=""
+          onError={(e) => {
+            e.currentTarget.src = DEFAULT_COVER_IMAGE;
+          }}
           className="w-full h-full object-cover blur-3xl scale-125"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/60" />
@@ -118,8 +122,11 @@ export const FullPlayerModal: React.FC = () => {
         {/* Large Poster Image with Visualizer */}
         <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-3xl overflow-hidden shadow-2xl shadow-purple-950/80 border border-purple-500/30 group">
           <img
-            src={currentNovel.coverUrl}
+            src={formatImageUrl(currentNovel.coverUrl)}
             alt={currentNovel.title}
+            onError={(e) => {
+              e.currentTarget.src = DEFAULT_COVER_IMAGE;
+            }}
             className="w-full h-full object-cover"
           />
 
