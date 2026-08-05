@@ -259,62 +259,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     setAuthMessage(null);
     if (isFirebaseConfigured && auth) {
-      // Detect if user is on mobile browser
-      const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (err: any) {
-          console.error('Mobile redirect sign in failed:', err);
-        }
-      }
-
+      // 1. Try signInWithPopup first (fastest on both Desktop and Mobile)
       try {
         const cred = await signInWithPopup(auth, googleProvider);
-        const profile: UserProfile = {
-          uid: cred.user.uid,
-          email: cred.user.email || '',
-          displayName: cred.user.displayName || 'Google User',
-          photoURL: cred.user.photoURL || undefined,
-          role: determineRole(cred.user.email || ''),
-          providerId: 'google',
-          favorites: user?.favorites || [],
-          listeningHistory: user?.listeningHistory || [],
-          createdAt: new Date().toISOString(),
-        };
-        saveUserSession(profile);
-        setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จแล้ว!' });
-        setTimeout(() => closeAuthModal(), 1200);
-      } catch (err: any) {
-        console.error('Google Sign-In Error:', err);
-        
-        // Fallback to Redirect if Popup is blocked/fails on mobile or desktop
-        if (
-          err.code === 'auth/popup-blocked' || 
-          err.code === 'auth/popup-closed-by-user' || 
-          (err.message && err.message.includes('Database is closing')) ||
-          (err.message && err.message.includes('hidden'))
-        ) {
-          try {
-            setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
-            await signInWithRedirect(auth, googleProvider);
-            return;
-          } catch (rErr: any) {
-            console.error('Fallback redirect error:', rErr);
-          }
+        if (cred?.user) {
+          const profile: UserProfile = {
+            uid: cred.user.uid,
+            email: cred.user.email || '',
+            displayName: cred.user.displayName || 'Google User',
+            photoURL: cred.user.photoURL || undefined,
+            role: determineRole(cred.user.email || ''),
+            providerId: 'google',
+            favorites: user?.favorites || [],
+            listeningHistory: user?.listeningHistory || [],
+            createdAt: new Date().toISOString(),
+          };
+          saveUserSession(profile);
+          setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จแล้ว!' });
+          setTimeout(() => closeAuthModal(), 1200);
+          return;
         }
-
-        if (err.code === 'auth/unauthorized-domain') {
+      } catch (popupErr: any) {
+        console.warn('signInWithPopup failed, attempting redirect fallback:', popupErr);
+        
+        if (popupErr.code === 'auth/unauthorized-domain') {
           setAuthMessage({ 
             type: 'error', 
             text: 'โดเมนเว็บไซต์นี้ยังไม่ได้เพิ่มใน Authorized Domains ของ Firebase Console' 
           });
-        } else if (err.code === 'auth/popup-closed-by-user') {
-          setAuthMessage({ type: 'error', text: 'คุณได้ปิดหน้าต่างเข้าสู่ระบบ Google ก่อนทำรายการเสร็จ' });
-        } else {
-          setAuthMessage({ type: 'error', text: `ไม่สามารถเข้าสู่ระบบด้วย Google ได้ (${err.message || 'ข้อผิดพลาดเกี่ยวกับสิทธิ์'})` });
+          return;
+        }
+
+        // 2. If popup is blocked/failed on mobile, fallback to Redirect
+        try {
+          setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr: any) {
+          console.error('signInWithRedirect error:', redirectErr);
+          setAuthMessage({ 
+            type: 'error', 
+            text: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง' 
+          });
         }
       }
     } else {
@@ -331,7 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createdAt: new Date().toISOString(),
       };
       saveUserSession(profile);
-      setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จ! (โหมดทดลองใช้งาน)' });
+      setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จ!' });
       setTimeout(() => closeAuthModal(), 1200);
     }
   };
