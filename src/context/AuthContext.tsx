@@ -251,7 +251,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จแล้ว!' });
         setTimeout(() => closeAuthModal(), 1200);
       } catch (err: any) {
-        setAuthMessage({ type: 'error', text: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้' });
+        console.error('Google Sign-In Error:', err);
+        if (err.code === 'auth/unauthorized-domain') {
+          setAuthMessage({ 
+            type: 'error', 
+            text: 'โดเมนเว็บไซต์นี้ยังไม่ได้เพิ่มใน Authorized Domains ของ Firebase Console' 
+          });
+        } else if (err.code === 'auth/popup-closed-by-user') {
+          setAuthMessage({ type: 'error', text: 'คุณได้ปิดหน้าต่างเข้าสู่ระบบ Google ก่อนทำรายการเสร็จ' });
+        } else {
+          setAuthMessage({ type: 'error', text: `ไม่สามารถเข้าสู่ระบบด้วย Google ได้ (${err.message || 'ข้อผิดพลาดเกี่ยวกับสิทธิ์'})` });
+        }
       }
     } else {
       // Sandbox fallback Google login
