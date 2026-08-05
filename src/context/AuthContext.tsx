@@ -259,7 +259,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     setAuthMessage(null);
     if (isFirebaseConfigured && auth) {
-      // 1. Try signInWithPopup first (fastest on both Desktop and Mobile)
+      const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      // On Mobile devices, directly trigger signInWithRedirect for 100% Android Chrome compatibility
+      if (isMobile) {
+        setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (err: any) {
+          console.error('Mobile signInWithRedirect error:', err);
+          if (err.code === 'auth/unauthorized-domain') {
+            setAuthMessage({ 
+              type: 'error', 
+              text: 'โดเมนเว็บไซต์นี้ยังไม่ได้เพิ่มใน Authorized Domains ของ Firebase Console' 
+            });
+            return;
+          }
+          setAuthMessage({ type: 'error', text: 'ไม่สามารถเปิดหน้าเข้าสู่ระบบ Google ได้' });
+          return;
+        }
+      }
+
+      // On Desktop, try signInWithPopup first
       try {
         const cred = await signInWithPopup(auth, googleProvider);
         if (cred?.user) {
@@ -290,7 +312,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // 2. If popup is blocked/failed on mobile, fallback to Redirect
         try {
           setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
           await signInWithRedirect(auth, googleProvider);

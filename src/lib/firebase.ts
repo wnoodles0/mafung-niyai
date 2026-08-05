@@ -4,9 +4,16 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 
+const getAuthDomain = () => {
+  if (typeof window !== "undefined" && window.location.hostname && !window.location.hostname.includes("localhost")) {
+    return window.location.host;
+  }
+  return process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "my-auth-app-107d1.firebaseapp.com";
+};
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyB_WhkAqPMhzDycK4wFyjpBNrau8yif-34",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "my-auth-app-107d1.firebaseapp.com",
+  authDomain: getAuthDomain(),
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "my-auth-app-107d1",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "my-auth-app-107d1.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "533855890531",
