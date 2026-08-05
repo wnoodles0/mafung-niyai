@@ -9,6 +9,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
@@ -103,6 +105,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 2. Sync with Firebase Auth if configured
     if (isFirebaseConfigured && auth) {
+      // Handle mobile redirect login result
+      getRedirectResult(auth)
+        .then((cred) => {
+          if (cred?.user) {
+            const profile: UserProfile = {
+              uid: cred.user.uid,
+              email: cred.user.email || '',
+              displayName: cred.user.displayName || cred.user.email?.split('@')[0] || 'ผู้ใช้งาน',
+              photoURL: cred.user.photoURL || undefined,
+              role: determineRole(cred.user.email || ''),
+              providerId: 'google',
+              favorites: [],
+              listeningHistory: [],
+              createdAt: new Date().toISOString(),
+            };
+            saveUserSession(profile);
+            closeAuthModal();
+          }
+        })
+        .catch((err) => {
+          console.error('Redirect sign-in error:', err);
+        });
+
       const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
         if (firebaseUser) {
           const profile: UserProfile = {
@@ -234,6 +259,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     setAuthMessage(null);
     if (isFirebaseConfigured && auth) {
+      // Detect if user is on mobile browser
+      const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (err: any) {
+          console.error('Mobile redirect sign in failed:', err);
+        }
+      }
+
       try {
         const cred = await signInWithPopup(auth, googleProvider);
         const profile: UserProfile = {
@@ -252,6 +289,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimeout(() => closeAuthModal(), 1200);
       } catch (err: any) {
         console.error('Google Sign-In Error:', err);
+        
+        // Fallback to Redirect if Popup is blocked/fails on mobile or desktop
+        if (
+          err.code === 'auth/popup-blocked' || 
+          err.code === 'auth/popup-closed-by-user' || 
+          (err.message && err.message.includes('Database is closing')) ||
+          (err.message && err.message.includes('hidden'))
+        ) {
+          try {
+            setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
+            await signInWithRedirect(auth, googleProvider);
+            return;
+          } catch (rErr: any) {
+            console.error('Fallback redirect error:', rErr);
+          }
+        }
+
         if (err.code === 'auth/unauthorized-domain') {
           setAuthMessage({ 
             type: 'error', 
