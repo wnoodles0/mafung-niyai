@@ -51,13 +51,22 @@ export const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1544716278
 /**
  * Helper to convert Google Drive image links or invalid image URLs
  * into direct displayable image URLs with fallback handling.
+ *
+ * Google Drive image links are routed through our server-side /api/drive-image
+ * proxy to bypass CORS restrictions and Google's hotlink blocking.
  */
 export function formatImageUrl(url?: string, fallback = DEFAULT_COVER_IMAGE): string {
   if (!url || !url.trim()) return fallback;
 
   const trimmed = url.trim();
 
-  // Convert Google Drive view links to direct image content URL (lh3.googleusercontent.com)
+  // If already our proxy URL, return as is
+  if (trimmed.startsWith('/api/drive-image')) return trimmed;
+
+  // Extract Google Drive file ID from any of these URL formats:
+  // Format A: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+  // Format B: https://drive.google.com/open?id=FILE_ID
+  // Format C: https://drive.google.com/uc?id=FILE_ID (or uc?export=...)
   const driveFilePattern = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
   const driveOpenPattern = /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/;
   const driveUcPattern = /drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/;
@@ -79,8 +88,10 @@ export function formatImageUrl(url?: string, fallback = DEFAULT_COVER_IMAGE): st
   }
 
   if (fileId) {
-    return `https://lh3.googleusercontent.com/d/${fileId}`;
+    // Route through server-side proxy — avoids CORS, hotlink blocks, and auth redirects
+    return `/api/drive-image?id=${fileId}`;
   }
 
+  // Return URL unchanged if it's already a direct image URL (Unsplash, Firebase Storage, etc.)
   return trimmed;
 }
