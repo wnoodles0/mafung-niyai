@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
@@ -22,7 +22,18 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize SDKs
 export const auth = getAuth(app);
+
+// Force auth state to be stored in localStorage (survives page reload and redirect)
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.warn('Failed to set auth persistence:', err);
+});
+
 export const googleProvider = new GoogleAuthProvider();
+// Request profile and email scopes explicitly
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
+// Hint to always show account picker — important for mobile re-auth
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 

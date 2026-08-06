@@ -93,7 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedUserStr) {
       try {
         const parsed = JSON.parse(savedUserStr);
-        // Ensure role is dynamically calculated if missing
         if (parsed) {
           parsed.role = determineRole(parsed.email);
           setUser(parsed);
@@ -103,11 +102,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    // Check if we're returning from a Google redirect flow
+    const redirectPending = localStorage.getItem('google_redirect_pending') === 'true';
+
     // 2. Sync with Firebase Auth if configured
     if (isFirebaseConfigured && auth) {
-      // Handle mobile redirect login result
-      getRedirectResult(auth)
+      let redirectHandled = false;
+
+      // --- Handle redirect result FIRST, before setting up onAuthStateChanged ---
+      // This avoids the race condition where onAuthStateChanged fires with null
+      // before getRedirectResult() has had a chance to process the OAuth response.
+      const handleRedirectResult = getRedirectResult(auth)
         .then((cred) => {
+          redirectHandled = true;
+          localStorage.removeItem('google_redirect_pending');
           if (cred?.user) {
             const profile: UserProfile = {
               uid: cred.user.uid,
@@ -125,10 +133,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         })
         .catch((err) => {
+          redirectHandled = true;
+          localStorage.removeItem('google_redirect_pending');
           console.error('Redirect sign-in error:', err);
         });
 
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      // --- Set up onAuthStateChanged ---
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        // If a redirect is still being processed, wait for it to complete
+        // before deciding the final auth state to avoid premature "not logged in"
+        if (redirectPending && !redirectHandled) {
+          await handleRedirectResult;
+        }
+
         if (firebaseUser) {
           const profile: UserProfile = {
             uid: firebaseUser.uid,
@@ -142,12 +159,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             createdAt: new Date().toISOString(),
           };
           saveUserSession(profile);
-        } else if (!savedUserStr) {
-          // Default guest mode if no stored session
+        } else if (!savedUserStr && !redirectPending) {
+          // Only set guest mode if we know for sure there's no redirect in flight
           setUser(null);
         }
         setLoading(false);
       });
+
       return () => unsubscribe();
     } else {
       setLoading(false);
@@ -259,36 +277,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     setAuthMessage(null);
     if (isFirebaseConfigured && auth) {
-      const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-      // On Mobile devices, directly trigger signInWithRedirect for 100% Android Chrome compatibility
-      if (isMobile) {
-        setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (err: any) {
-          console.error('Mobile signInWithRedirect error:', err);
-          if (err.code === 'auth/unauthorized-domain') {
-            setAuthMessage({ 
-              type: 'error', 
-              text: 'โดเมนเว็บไซต์นี้ยังไม่ได้เพิ่มใน Authorized Domains ของ Firebase Console' 
-            });
-            return;
-          }
-          setAuthMessage({ type: 'error', text: 'ไม่สามารถเปิดหน้าเข้าสู่ระบบ Google ได้' });
-          return;
-        }
-      }
-
-      // On Desktop, try signInWithPopup first
+      // ─── POPUP-FIRST STRATEGY ─────────────────────────────────────────────
+      // signInWithPopup is the preferred method on ALL platforms including mobile.
+      // Chrome Android 100+ supports popups from direct user interactions.
+      // signInWithRedirect is only used as a fallback when popup is blocked.
+      // ─────────────────────────────────────────────────────────────────────
       try {
         const cred = await signInWithPopup(auth, googleProvider);
         if (cred?.user) {
           const profile: UserProfile = {
             uid: cred.user.uid,
             email: cred.user.email || '',
-            displayName: cred.user.displayName || 'Google User',
+            displayName: cred.user.displayName || 'ผู้ใช้งาน Google',
             photoURL: cred.user.photoURL || undefined,
             role: determineRole(cred.user.email || ''),
             providerId: 'google',
@@ -297,35 +298,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             createdAt: new Date().toISOString(),
           };
           saveUserSession(profile);
-          setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จแล้ว!' });
+          setAuthMessage({ type: 'success', text: 'เข้าสู่ระบบด้วย Google สำเร็จแล้ว! 🎉' });
           setTimeout(() => closeAuthModal(), 1200);
           return;
         }
       } catch (popupErr: any) {
-        console.warn('signInWithPopup failed, attempting redirect fallback:', popupErr);
-        
+        console.warn('[Google Auth] signInWithPopup error:', popupErr.code);
+
+        // Domain not authorized in Firebase Console
         if (popupErr.code === 'auth/unauthorized-domain') {
-          setAuthMessage({ 
-            type: 'error', 
-            text: 'โดเมนเว็บไซต์นี้ยังไม่ได้เพิ่มใน Authorized Domains ของ Firebase Console' 
+          setAuthMessage({
+            type: 'error',
+            text: 'โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Console กรุณาติดต่อผู้ดูแลระบบ',
           });
           return;
         }
 
-        try {
-          setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
-          await signInWithRedirect(auth, googleProvider);
+        // User closed the popup — don't show error
+        if (popupErr.code === 'auth/popup-closed-by-user' ||
+            popupErr.code === 'auth/cancelled-popup-request') {
+          setAuthMessage(null);
           return;
-        } catch (redirectErr: any) {
-          console.error('signInWithRedirect error:', redirectErr);
-          setAuthMessage({ 
-            type: 'error', 
-            text: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง' 
-          });
         }
+
+        // Popup was blocked by the browser — fall back to redirect
+        if (popupErr.code === 'auth/popup-blocked' ||
+            popupErr.code === 'auth/operation-not-supported-in-this-environment') {
+          console.warn('[Google Auth] Popup blocked, falling back to redirect flow...');
+          setAuthMessage({ type: 'success', text: 'กำลังนำคุณไปยังหน้าเข้าสู่ระบบ Google...' });
+          try {
+            // Set flag BEFORE redirect so we know to wait for getRedirectResult on return
+            localStorage.setItem('google_redirect_pending', 'true');
+            await signInWithRedirect(auth, googleProvider);
+            return;
+          } catch (redirectErr: any) {
+            localStorage.removeItem('google_redirect_pending');
+            console.error('[Google Auth] signInWithRedirect error:', redirectErr);
+            setAuthMessage({
+              type: 'error',
+              text: 'ไม่สามารถเปิดหน้าเข้าสู่ระบบ Google ได้ กรุณาลองใหม่อีกครั้ง',
+            });
+            return;
+          }
+        }
+
+        // Any other unexpected error
+        console.error('[Google Auth] Unexpected error:', popupErr);
+        setAuthMessage({
+          type: 'error',
+          text: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ Google กรุณาลองใหม่อีกครั้ง',
+        });
       }
     } else {
-      // Sandbox fallback Google login
+      // Sandbox fallback Google login (no Firebase configured)
       const profile: UserProfile = {
         uid: `google-user-${Date.now()}`,
         email: 'user.google@gmail.com',
