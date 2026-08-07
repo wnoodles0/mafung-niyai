@@ -1,0 +1,7 @@
+﻿node_modules/
+token.json
+credentials.json
+firebase-admin.json
+*.json
+!package.json
+!package-lock.json
