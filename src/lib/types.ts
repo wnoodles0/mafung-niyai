@@ -2,6 +2,9 @@ export interface Chapter {
   id: string;
   novelId: string;
   chapterNumber: number;
+  volumeNumber?: number;    // เล่มที่ (e.g. 1, 2, 3...)
+  episodeRange?: string;    // ช่วงตอน (e.g. "1-5", "6-10")
+  isFree?: boolean;         // false = VIP only (ค่าเริ่มต้นคือ free)
   title: string;
   audioUrl: string;
   duration: number; // in seconds

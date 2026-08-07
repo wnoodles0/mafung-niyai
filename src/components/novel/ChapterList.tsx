@@ -62,9 +62,19 @@ export const ChapterList: React.FC<ChapterListProps> = ({ novel, chapters }) => 
               </div>
 
               <div className="min-w-0 space-y-0.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Volume badge */}
+                  {chapter.volumeNumber && (
+                    <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      isCurrent
+                        ? 'bg-purple-600/30 text-purple-200 border-purple-500/50'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}>
+                      เล่ม {chapter.volumeNumber}
+                    </span>
+                  )}
                   <h4 className={`text-sm font-semibold truncate ${isCurrent ? 'text-purple-300' : 'text-slate-200 group-hover:text-purple-300'}`}>
-                    {chapter.title}
+                    {chapter.episodeRange ? `ตอนที่ ${chapter.episodeRange}` : chapter.title}
                   </h4>
                   {isCurrent && (
                     <span className="shrink-0 flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">

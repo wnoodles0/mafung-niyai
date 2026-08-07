@@ -52,6 +52,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const preloadRef = useRef<HTMLAudioElement | null>(null); // preloaded next chapter
+  const preloadedKeyRef = useRef<string | null>(null);     // URL of preloaded chapter
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSavedPos = useRef<number | null>(null);
 
@@ -63,6 +65,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const handleTimeUpdate = () => {
         setCurrentTime(audio.currentTime);
+
+        // ── Preload next chapter at 80% ──────────────────────────────────────
+        if (audio.duration > 0 && audio.currentTime / audio.duration >= 0.80) {
+          const nextChapter = getNextChapterRef.current();
+          if (nextChapter) {
+            const nextUrl = formatAudioUrl(nextChapter.audioUrl);
+            if (preloadedKeyRef.current !== nextUrl) {
+              preloadedKeyRef.current = nextUrl;
+              const preloadAudio = new Audio(nextUrl);
+              preloadAudio.preload = 'auto';
+              preloadRef.current = preloadAudio;
+            }
+          }
+        }
       };
 
       const handleLoadedMetadata = () => {
@@ -88,7 +104,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         saveHistoryProgress(audio.duration || 0);
 
         if (autoPlayNext) {
-          // Play next chapter immediately (0s delay)
+          // Play next chapter immediately using preloaded audio if available
           playNextRef.current(true);
         }
       };
@@ -168,6 +184,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const playNextRef = useRef<(isAuto?: boolean) => void>(() => {});
+  const getNextChapterRef = useRef<() => Chapter | null>(() => null);
 
   const getSavedPosition = (novelId: string, chapterId: string): number => {
     const found = listeningHistory.find(
@@ -194,7 +211,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const isCompletedBefore = savedPos >= (chapter.duration || 99999) - 10;
     pendingSavedPos.current = (!isAutoPlayNext && !isCompletedBefore && savedPos > 5) ? savedPos : null;
 
-    if (audioRef.current.src !== formattedAudio) {
+    // ── Use preloaded audio if available (for seamless zero-gap autoplay) ───────────
+    if (isAutoPlayNext && preloadRef.current && preloadedKeyRef.current === formattedAudio) {
+      // Swap preloaded element into the player
+      const preloaded = preloadRef.current;
+      preloaded.playbackRate = playbackRate;
+      // Copy event listeners by re-assigning the main ref
+      // (we replace the src instead to keep event listeners on the original element)
+      audioRef.current.src = formattedAudio;
+      preloadRef.current = null;
+      preloadedKeyRef.current = null;
+    } else if (audioRef.current.src !== formattedAudio) {
       audioRef.current.src = formattedAudio;
       audioRef.current.playbackRate = playbackRate;
       audioRef.current.load();
@@ -267,6 +294,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
   playNextRef.current = playNext;
+
+  // Keep getNextChapterRef updated so preload logic can find next chapter
+  const getNextChapter = (): Chapter | null => {
+    if (!currentChapter || queue.length === 0) return null;
+    const currentIndex = queue.findIndex((c) => c.id === currentChapter.id);
+    if (currentIndex >= 0 && currentIndex < queue.length - 1) {
+      return queue[currentIndex + 1];
+    }
+    return null;
+  };
+  getNextChapterRef.current = getNextChapter;
 
   const playPrevious = () => {
     if (!currentChapter || queue.length === 0 || !currentNovel) return;
