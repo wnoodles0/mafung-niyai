@@ -14,6 +14,7 @@ import {
   Moon, 
   Repeat,
   AlertTriangle,
+  CheckCircle2,
   X
 } from 'lucide-react';
 import { formatImageUrl, DEFAULT_COVER_IMAGE } from '@/lib/audioUtils';
@@ -29,6 +30,7 @@ export const AudioPlayer: React.FC = () => {
     autoPlayNext,
     sleepTimer,
     audioError,
+    toastNotice,
     togglePlayPause,
     seekTo,
     skipTime,
@@ -39,6 +41,7 @@ export const AudioPlayer: React.FC = () => {
     setSleepTimerMinutes,
     toggleFullPlayer,
     clearAudioError,
+    clearToastNotice,
   } = useAudio();
 
   const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
@@ -70,6 +73,19 @@ export const AudioPlayer: React.FC = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-2xl border-t border-purple-900/40 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
       
+      {/* Toast Completion Notice Banner */}
+      {toastNotice && (
+        <div className="bg-gradient-to-r from-emerald-950/95 to-purple-950/95 border-b border-emerald-600/50 text-emerald-200 px-4 py-2.5 text-xs font-bold flex items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastNotice}</span>
+          </div>
+          <button onClick={clearToastNotice} className="p-1 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Audio Source Warning Banner */}
       {audioError && (
         <div className="bg-rose-950/90 border-b border-rose-800 text-rose-200 px-4 py-2 text-xs font-semibold flex items-center justify-between gap-2 animate-in fade-in">

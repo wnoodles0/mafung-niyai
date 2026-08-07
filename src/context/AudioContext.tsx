@@ -18,6 +18,7 @@ interface AudioContextType {
   isFullPlayerOpen: boolean;
   listeningHistory: ListeningHistory[];
   audioError: string | null;
+  toastNotice: string | null;
   playChapter: (novel: Novel, chapter: Chapter, autoStart?: boolean) => void;
   togglePlayPause: () => void;
   seekTo: (time: number) => void;
@@ -30,6 +31,7 @@ interface AudioContextType {
   toggleFullPlayer: (open?: boolean) => void;
   getSavedPosition: (novelId: string, chapterId: string) => number;
   clearAudioError: () => void;
+  clearToastNotice: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -47,6 +49,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState<boolean>(false);
   const [listeningHistory, setListeningHistory] = useState<ListeningHistory[]>([]);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [toastNotice, setToastNotice] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,9 +88,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         saveHistoryProgress(audio.duration || 0);
 
         if (autoPlayNext) {
-          setTimeout(() => {
-            playNextRef.current();
-          }, 800);
+          // Play next chapter immediately (0s delay)
+          playNextRef.current();
         }
       };
 
@@ -253,6 +255,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (currentIndex >= 0 && currentIndex < queue.length - 1) {
       const nextChapter = queue[currentIndex + 1];
       playChapter(currentNovel, nextChapter, true);
+    } else {
+      // Reached the end of the novel queue
+      setToastNotice(`🎉 คุณฟังนิยายเรื่อง "${currentNovel.title}" จบครบทุกตอนแล้ว`);
+      setTimeout(() => {
+        setToastNotice(null);
+      }, 5000);
     }
   };
   playNextRef.current = playNext;
@@ -300,6 +308,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAudioError(null);
   };
 
+  const clearToastNotice = () => {
+    setToastNotice(null);
+  };
+
   return (
     <AudioContext.Provider
       value={{
@@ -315,6 +327,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isFullPlayerOpen,
         listeningHistory,
         audioError,
+        toastNotice,
         playChapter,
         togglePlayPause,
         seekTo,
@@ -327,6 +340,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleFullPlayer,
         getSavedPosition,
         clearAudioError,
+        clearToastNotice,
       }}
     >
       {children}
