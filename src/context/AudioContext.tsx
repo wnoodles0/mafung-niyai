@@ -89,7 +89,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         if (autoPlayNext) {
           // Play next chapter immediately (0s delay)
-          playNextRef.current();
+          playNextRef.current(true);
         }
       };
 
@@ -167,7 +167,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const playNextRef = useRef<() => void>(() => {});
+  const playNextRef = useRef<(isAuto?: boolean) => void>(() => {});
 
   const getSavedPosition = (novelId: string, chapterId: string): number => {
     const found = listeningHistory.find(
@@ -176,20 +176,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return found ? found.progress : 0;
   };
 
-  const playChapter = (novel: Novel, chapter: Chapter, autoStart = true) => {
+  const playChapter = (novel: Novel, chapter: Chapter, autoStart = true, isAutoPlayNext = false) => {
     if (!audioRef.current) return;
     setAudioError(null);
 
     const novelChapters = novel.chapters || MOCK_CHAPTERS[novel.id] || [chapter];
+    // Ensure queue is sorted in ascending order
+    const sortedChapters = [...novelChapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
     setCurrentNovel(novel);
     setCurrentChapter(chapter);
-    setQueue(novelChapters);
+    setQueue(sortedChapters);
 
     const formattedAudio = formatAudioUrl(chapter.audioUrl);
 
-    // Save position to set after load
+    // Save position to set after load (if autoPlayNext or finished before, start from 0)
     const savedPos = getSavedPosition(novel.id, chapter.id);
-    pendingSavedPos.current = savedPos > 5 ? savedPos : null;
+    const isCompletedBefore = savedPos >= (chapter.duration || 99999) - 10;
+    pendingSavedPos.current = (!isAutoPlayNext && !isCompletedBefore && savedPos > 5) ? savedPos : null;
 
     if (audioRef.current.src !== formattedAudio) {
       audioRef.current.src = formattedAudio;
@@ -249,12 +252,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     seekTo(newTime);
   };
 
-  const playNext = () => {
+  const playNext = (isAuto = false) => {
     if (!currentChapter || queue.length === 0 || !currentNovel) return;
     const currentIndex = queue.findIndex((c) => c.id === currentChapter.id);
     if (currentIndex >= 0 && currentIndex < queue.length - 1) {
       const nextChapter = queue[currentIndex + 1];
-      playChapter(currentNovel, nextChapter, true);
+      playChapter(currentNovel, nextChapter, true, isAuto);
     } else {
       // Reached the end of the novel queue
       setToastNotice(`🎉 คุณฟังนิยายเรื่อง "${currentNovel.title}" จบครบทุกตอนแล้ว`);
