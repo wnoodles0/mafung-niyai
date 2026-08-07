@@ -83,6 +83,12 @@ export const NovelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
               fsChapters[ch.novelId].push(ch);
             });
+
+            // Sort each novel's chapters by chapterNumber ASC
+            Object.keys(fsChapters).forEach((nId) => {
+              fsChapters[nId].sort((a, b) => a.chapterNumber - b.chapterNumber);
+            });
+
             loadedChapters = fsChapters;
             localStorage.setItem('mafangniyai_saved_chapters', JSON.stringify(fsChapters));
           }

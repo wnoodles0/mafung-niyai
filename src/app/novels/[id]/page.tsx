@@ -30,7 +30,8 @@ export default function NovelDetailPage() {
 
   function selectedNovelChapters() {
     if (!novel) return [];
-    return chaptersMap[novel.id] || novel.chapters || [];
+    const list = chaptersMap[novel.id] || novel.chapters || [];
+    return [...list].sort((a, b) => a.chapterNumber - b.chapterNumber);
   }
 
   const { playChapter } = useAudio();
