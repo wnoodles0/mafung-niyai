@@ -1,5 +1,6 @@
 /** Cloudflare R2 CDN base URL — files are served directly, no proxy needed */
-export const R2_CDN_URL = 'https://cdn.mafangniyai.com';
+export const R2_CDN_URL = 'https://pub-a8e1f5b82bd84939ad4532a9e65e6321.r2.dev';
+// TODO: Switch to 'https://cdn.mafangniyai.com' once nameservers propagate
 
 /** Fallback cover image (used when no cover is set or image fails to load) */
 export const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80';
